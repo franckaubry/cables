@@ -10,7 +10,6 @@ import CgTexture from "../cg/cg_texture.js";
 // https://developer.chrome.com/blog/from-webgl-to-webgpu/
 // https://gpuweb.github.io/gpuweb/explainer/
 
-
 /**
  * cables webgpu context/state manager
  * @class
@@ -20,10 +19,13 @@ import CgTexture from "../cg/cg_texture.js";
 // const Context = function (_patch)
 class WebGpuContext extends CGState
 {
+
+    /**
+     * @param {Patch} _patch
+     */
     constructor(_patch)
     {
         super();
-
         this.patch = _patch;
 
         this.lastErrorMsg = "";
@@ -44,6 +46,8 @@ class WebGpuContext extends CGState
         this._stackErrorScope = [];
         this._stackBlend = [];
         this._stackErrorScopeLogs = [];
+
+        this.currentPipeDebug = null;
 
         this._defaultBlend = {
             "color": {
@@ -77,11 +81,11 @@ class WebGpuContext extends CGState
         ];
     }
 
-
     /// ////////////////////
 
     renderStart(cgp, identTranslate, identTranslateView)
     {
+
         this.frame++;
         this.pushErrorScope("cgpstate internal", "internal");
         this.pushErrorScope("cgpstate out-of-memory", "out-of-memory");
@@ -128,7 +132,6 @@ class WebGpuContext extends CGState
         this.fpsCounter.endFrame();
     }
 
-
     setViewPort(x, y, w, h)
     {
         this._viewport = [x, y, w, h];
@@ -149,6 +152,39 @@ class WebGpuContext extends CGState
     createMesh(geom, glPrimitive)
     {
         return new CGP.Mesh(this, geom, glPrimitive);
+    }
+
+    /**
+     * @function popViewPort
+     * @memberof Context
+     * @instance
+     * @description pop viewPort stack
+     */
+    popViewPort()
+    {
+        this._viewPortStack.pop();
+
+        if (this._viewPortStack.length == 0)
+            this._viewPort = [0, 0, this.canvasWidth, this.canvasHeight];
+        else
+            this.setViewPort(this._viewPortStack[this._viewPort.length - 1]);
+    }
+
+    /**
+     * @function pushViewPort
+     * @memberof Context
+     * @instance
+     * @description push a new viewport onto stack
+     * @param {Number} x
+     * @param {Number} y
+     * @param {Number} w
+     * @param {Number} h
+     */
+
+    pushViewPort(x, y, w, h)
+    {
+        this._viewPortStack.push([x, y, w, h]);
+        this._viewPort = [x, y, w, h];
     }
 
     /**
@@ -189,7 +225,6 @@ class WebGpuContext extends CGState
     setDevice(device)
     {
         this.device = device;
-
 
         if (this._emptyTexture) this._emptyTexture = this._emptyTexture.dispose();
         if (this._defaultTexture) this._defaultTexture = this._defaultTexture.dispose();
@@ -327,7 +362,7 @@ class WebGpuContext extends CGState
      * @function stateDepthFunc
      * @memberof Context
      * @instance
-     * @returns {string}
+     * @returns {boolean}
      */
     stateDepthFunc()
     {
@@ -463,5 +498,6 @@ class WebGpuContext extends CGState
         this._defaultTexture.initFromData(CgTexture.getDefaultTextureData("stripes", size), size, size);
         return this._defaultTexture;
     }
+
 }
 export { WebGpuContext };
